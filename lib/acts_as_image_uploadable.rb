@@ -52,7 +52,7 @@ module ActsAsImageUploadable #:nodoc:
         alias :original_save_upload_file :save_upload_file
         def save_upload_file
           original_save_upload_file
-          resize_files
+          resize_files if image_exist?
         end
 
         alias :original_upload_dirpath :upload_dirpath
@@ -102,6 +102,7 @@ module ActsAsImageUploadable #:nodoc:
           "image/png",
           "image/x-png",
           "image/jpeg",
+          "image/pjpeg",
           "image/gif"
         ]
       }

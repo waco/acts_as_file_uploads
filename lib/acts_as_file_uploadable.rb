@@ -86,6 +86,7 @@ module ActsAsFileUploadable #:nodoc:
 
       validates_each attr_names do |record, attr_name, value|
         next if value.blank?
+        ActiveRecord::Base.logger.debug(value.content_type)
         record.errors.add(attr_name, configuration[:message]) unless
           configuration[:content_type].blank? || configuration[:content_type].include?(value.content_type)
       end
