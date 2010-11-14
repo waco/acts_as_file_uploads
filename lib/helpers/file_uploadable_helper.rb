@@ -37,11 +37,11 @@ module FileUploadableHelper
 
       def #{options[:prefix]}#{upload_model}_image_tag(file, options = {})
         html = ''
-        options = { :html => { :alt => '' } }.update(options)
+        options = { :image_attr => { :alt => '' } }.update(options)
         path = #{options[:prefix]}#{upload_model}_file_path(file, options)
         unless path.blank?
-          html = image_tag(path, options[:html])
-          html = link_to(html, options[:url]) unless options[:url].blank?
+          html = image_tag(path, options[:image_attr])
+          html = link_to(html, options[:url], options[:link_attr]) unless options[:url].blank?
         end
 
         html
