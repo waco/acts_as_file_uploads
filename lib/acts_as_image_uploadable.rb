@@ -19,6 +19,9 @@ module ActsAsImageUploadable #:nodoc:
     #  acts_as_image_uploads :dir => :users, :resize_list => [:name => 'thumbs', :width => 100, :height => 100]
     #
     def acts_as_image_uploads(options = {})
+      return if self.included_modules.include?(ActsAsImageUploadable::InstanceMethods)
+      include ActsAsImageUploadable::InstanceMethods
+
       raise ArgumentError, "options[:resize_list] are invalid format" unless
         options[:resize_list].blank? || (
           options[:resize_list].is_a?(Array) &&
@@ -47,9 +50,10 @@ module ActsAsImageUploadable #:nodoc:
       acts_as_file_uploads(options)
 
       class_eval do
+        before_save :fix_jpeg_content_type
         alias :image_exist? :file_exist?
-
         alias :original_save_upload_file :save_upload_file
+
         def save_upload_file
           original_save_upload_file
           resize_files if image_exist?
@@ -110,6 +114,14 @@ module ActsAsImageUploadable #:nodoc:
       configuration.update options unless options.blank?
       attr_names.push configuration
       validates_file_upload_of(*attr_names)
+    end
+  end
+  module InstanceMethods
+
+    private
+
+    def fix_jpeg_content_type
+      self.content_type = 'image/jpeg' if /^image\/pjpeg/ =~ self.content_type
     end
   end
 end
