@@ -6,7 +6,7 @@ module ActsAsFileUploadable #:nodoc:
   module ClassMethods
     # == Configration options
     #
-    # *<tt>dir</tt> - directory to upload (required)
+    # *<tt>dir</tt> - directory to upload (options, default: model name)
     # *<tt>file_field</tt> - name of file_field (option, default: "file")
     #
     # Examples:
@@ -17,36 +17,32 @@ module ActsAsFileUploadable #:nodoc:
       return if self.included_modules.include?(ActsAsFileUploadable::InstanceMethods)
       include ActsAsFileUploadable::InstanceMethods
 
-      # errors
-      raise ArgumentError, ["Define 'ActsAsFileUploadable::UPLOADS_DIR' in 'config/developments/ENV.rb'",
-        "(ex. ActsAsFileUploadable::UPLOADS_DIR = \"\#{RAILS_ROOT}/uploads/development\")"
-        ].join("\n") unless defined? ActsAsFileUploadable::UPLOADS_DIR  
-
-      raise ArgumentError, "options[:dir] is required" if options[:dir].blank?  
+      options[:dir] = self.model_name.underscore if options[:dir].blank?
 
       # create scope
       cattr_accessor :file_upload
-      self.file_upload = ActsAsFileUploadable::FileUpload.new(self, options)
+      self.file_upload = FileUpload.new(self, options)
 
       class_eval do
         after_save :save_upload_file
 
         # use for file_field
-        # example) 
+        # example)
         # acts_as_file_uploads :dir => "uploads", :file_field => "file"
         #  <%= file_field :file %>
         define_method("#{self.file_upload.file_field}=") do |data|
-          raise TypeError, "#{self.file_upload.file_field} is not TempFile" unless data.is_a? Tempfile
-
-          self.content_type = data.content_type 
-          self.filename = data.original_filename   
-
-          @upload_tempfile = data
-        end 
+          if defined?(data.content_type) && defined?(data.original_filename)
+            self.content_type = data.content_type
+            self.filename = data.original_filename
+            @upload_tempfile = data
+          else
+            raise TypeError, "#{self.file_upload.file_field} is not UploadedFile, but #{data.class}"
+          end
+        end
 
         define_method("#{self.file_upload.file_field}") do
           @upload_tempfile
-        end 
+        end
 
         # generate filepath
         def upload_filepath(size = "")
@@ -57,11 +53,15 @@ module ActsAsFileUploadable #:nodoc:
         # generate dirpath
         def upload_dirpath(size = "")
           size = size.to_s
-          dir = "#{ActsAsFileUploadable::UPLOADS_DIR}/#{self.file_upload.dir}/"
+          dir = "#{ActsAsFileUploadable::Config.upload_dir}/#{self.file_upload.dir}/"
         end
 
         def file_exist?(size = "")
           !!self.id && !!self.content_type && File.exist?(upload_filepath(size))
+        end
+
+        def upload_tempfile?
+          !@upload_tempfile.nil?
         end
       end
     end
@@ -94,9 +94,7 @@ module ActsAsFileUploadable #:nodoc:
   end
 
   module InstanceMethods
-
     private
-
     def save_upload_file
       return if @upload_tempfile.nil?
       @upload_tempfile.rewind
@@ -107,7 +105,7 @@ module ActsAsFileUploadable #:nodoc:
     end
 
     def mkdir(dir)
-      `mkdir -p "#{dir}"` unless File.exist?(dir)
+      FileUtils.mkdir_p dir unless File.exist?(dir)
     end
   end
 
@@ -125,4 +123,13 @@ module ActsAsFileUploadable #:nodoc:
     end
   end
 
+  class Config
+    cattr_accessor :upload_dir
+  end
+
+  class Railtie < ::Rails::Railtie
+    config.acts_as_file_uploadable = Config
+    initializer "acts_as_file_uploadable.initialize" do |app|
+    end
+  end
 end

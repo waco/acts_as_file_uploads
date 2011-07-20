@@ -9,8 +9,9 @@
 ==使用方法
 
 アップロードを管理するtableに以下の2つのカラムを追加してください。
--content_type
--filename  
+
+-content_type: string
+-filename: string  
 
 アップロードをするディレクトリを設定します。
 ActsAsFileUploadable::UPLOADS_DIRに指定してください。
@@ -43,18 +44,8 @@ app/helpers/application_helper.rb
  %   acts_as_image_uploads :user, :user_upload
  % end
 
-あとはviewに以下のように書くだけで幸せになれます。
-
- % <% f.fields_for :user_uploads do |d| %>
- % <p>ファイル選択:
- % <%= d.file_field :file, :class => 'filefield' %></p>
- % <p>画像:
- % <%= user_upload_image_tag(d.object) %></p>
- % <% end %>
-
 ToDo
 
-- コントローラのヘルパみたいなのを書く
 - ドキュメント書く
 
 Copyright (c) 2010 waco, released under the MIT license
