@@ -70,11 +70,11 @@ module ActsAsImageUploadable #:nodoc:
         def save_upload_file
           return if @upload_tempfile.nil?
           @upload_tempfile.rewind
-          mkdir(upload_dirpath(name))
+          mkdir(upload_dirpath)
           img = Magick::ImageList.new
           img.from_blob(@upload_tempfile.read)
           file_upload_class = self.file_upload
-          img.write(upload_filepath(name)) do
+          img.write(upload_filepath) do
             self.format = file_upload_class.convert if file_upload_class.convert
           end
           resize_files

@@ -11,12 +11,8 @@ module FileUploadableHelper
     case filetype.to_s
     when "jpeg"
       def tmp.content_type; "image/jpeg"; end
-    when "gif"
-      def tmp.content_type; "image/gif"; end
-    when "png"
-      def tmp.content_type; "image/png"; end
-    else
-      def tmp.content_type; "image/plain"; end
+    else "text"
+      def tmp.content_type; "text/plain"; end
     end
     tmp
   end
