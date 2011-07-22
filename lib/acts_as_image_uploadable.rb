@@ -26,7 +26,7 @@ module ActsAsImageUploadable #:nodoc:
       raise ArgumentError, "options[:resize_list] are invalid format" unless
         options[:resize_list].blank? || (
           options[:resize_list].is_a?(Array) &&
-          !options[:resize_list].index{|r| !(r.has_key?(:name) && r.has_key?(:width) && r.has_key?(:height)) }
+          !options[:resize_list].index{|r| !(r.has_key?(:name) && (r.has_key?(:width) || r.has_key?(:height))) }
         )
       options[:dir] = self.model_name.underscore if options[:dir].blank?
 
@@ -59,14 +59,26 @@ module ActsAsImageUploadable #:nodoc:
         alias :original_upload_dirpath :upload_dirpath
 
         # generate dirpath
-        def upload_dirpath(size = "")
-          dir = original_upload_dirpath(size)
-          dir << (self.file_upload.resize_name.include?(size) ? size : "original")
+        def upload_dirpath(size_name = "")
+          dir = original_upload_dirpath(size_name)
+          dir << (self.file_upload.resize_name.include?(size_name) ?
+            size_name : ActsAsFileUploadable::Config.defaut_size_name)
+        end
+
+        # get image width
+        def width(size_name = "")
+          get_image_size_lists(size_name)["width"]
+        end
+
+        # get image height
+        def height(size_name = "")
+          get_image_size_lists(size_name)["height"]
         end
 
         private
 
         alias :original_save_upload_file :save_upload_file
+
         def save_upload_file
           return if @upload_tempfile.nil?
           @upload_tempfile.rewind
@@ -74,10 +86,20 @@ module ActsAsImageUploadable #:nodoc:
           img = Magick::ImageList.new
           img.from_blob(@upload_tempfile.read)
           file_upload_class = self.file_upload
-          img.write(upload_filepath) do
-            self.format = file_upload_class.convert if file_upload_class.convert
-          end
+          @size_list = {}
+          @size_list[ActsAsFileUploadable::Config.defaut_size_name] = { :width => img.columns, :height => img.rows }
+          img.write(upload_filepath) { self.format = file_upload_class.convert if file_upload_class.convert }
+
           resize_files
+
+          if self.respond_to? :size
+            self.class.skip_callback(:save, :after, :save_upload_file)
+            self.size = @size_list.to_json
+            self.save :validate => false
+            self.class.set_callback(:save, :after, :save_upload_file)
+          end
+
+          run_gc
         end
 
         def resize_files
@@ -85,20 +107,32 @@ module ActsAsImageUploadable #:nodoc:
           self.file_upload.resize_list.each do |o|
             img = resize_file img, o[:name], o[:width], o[:height]
           end
-          run_gc
         end
 
         def resize_file(img, name, resize_width, resize_height)
-          width = img.columns
-          height = img.rows
-          ratio = width > height ? resize_width.to_f / width.to_f : resize_height.to_f / height.to_f
+          ratio_columns = resize_width.blank? ? 1.0 : resize_width.to_f / img.columns.to_f
+          ratio_rows = resize_height.blank? ? 1.0 : resize_height.to_f / img.rows.to_f
+          ratio = [ratio_columns, ratio_rows].min
           img = img.resize(ratio) if ratio < 1.0
+          @size_list[name] = { :width => img.columns, :height => img.rows }
           mkdir(upload_dirpath(name))
           img.write(upload_filepath(name))
 
           img
         end
 
+        def get_image_size_lists(size_name = "")
+          unless self.respond_to? :size
+            {}
+          else
+            size_name = size_name.to_s unless size_name.blank?
+            size_name = self.file_upload.resize_name.include?(size_name) ?
+              size_name : ActsAsFileUploadable::Config.defaut_size_name
+
+            size_list = JSON.parse(self.size)
+            size_list[size_name]
+          end
+        end
       end
     end
 
@@ -145,6 +179,17 @@ module ActsAsImageUploadable #:nodoc:
       fDisabled = GC.enable
       GC.start
       GC.disable if fDisabled
+    end
+  end
+
+  # configuration
+  ActsAsFileUploadable::Config.class_eval do
+    @@defaut_size_name = "original"
+    def self.defaut_size_name=(value)
+      @@defaut_size_name = value
+    end
+    def self.defaut_size_name
+      @@defaut_size_name
     end
   end
 end

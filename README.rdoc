@@ -10,42 +10,35 @@
 
 アップロードを管理するtableに以下の2つのカラムを追加してください。
 
--content_type: string
--filename: string  
+- content_type: string
+- filename: string  
+- size: string (acts_as_image_uploadableを使う場合)
 
 アップロードをするディレクトリを設定します。
-ActsAsFileUploadable::UPLOADS_DIRに指定してください。
-config/environments/ENV.rbに書くと、環境によってアップロード先を変えることができます。
+config/initializers/acts_as_file_uploadable.rbなどに書くと、環境によってアップロード先を変えることができます。
 
- % ActsAsFileUploadable::UPLOADS_DIR = "#{RAILS_ROOT}/uploads/development"
+ApplicationName::Application.config.acts_as_file_uploadable.upload_dir = "upload/path"
 
 アップロードの処理を行うために、Modelにacts_as_file_uploads(acts_as_image_uploads)
 を記述してください。
 
-app/models/dealer.rb
- % class User < ActiveRecord::Base
- %   has_many :dealer_uploads
- % 
- %   accepts_nested_attributes_for :user_uploads, :allow_destroy => true
+単純なファイルのアップロードの場合
+ % class Upload < ActiveRecord::Base
+ %   acts_as_file_uploads
+ %
+ %   validates_file_upload_of :file
  % end
 
-app/models/dealer_upload.rb
- % class UserUpload < ActiveRecord::Base
- %   belongs_to :dealer
- % 
- %   acts_as_image_uploads :dir => 'users'
+画像ファイルを扱う場合
+ % class Image < ActiveRecord::Base
+ %   acts_as_image_uploads
  %
  %   validates_image_upload_of :file
  % end
  
-app/helpers/application_helper.rb
- % include FileUploadableHelper
- % module ApplicationHelper
- %   acts_as_image_uploads :user, :user_upload
- % end
-
 ToDo
 
 - ドキュメント書く
+- ヘルパをもっといっぱい書く。特にコントローラの。
 
-Copyright (c) 2010 waco, released under the MIT license
+Copyright (c) 2011 waco, released under the MIT license

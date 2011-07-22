@@ -10,6 +10,10 @@ ActiveRecord::Base.establish_connection({ :adapter => "sqlite3", :database => ":
 
 # Modelの定義
 class Upload < ActiveRecord::Base
+  acts_as_file_uploads :dir => 'uploads'
+  validates_file_upload_of :file
+end
+class Image < ActiveRecord::Base
   acts_as_image_uploads :dir => 'uploads'
   validates_image_upload_of :file
 end
@@ -96,14 +100,40 @@ class ActsAsFileUploadsTest < Test::Unit::TestCase
     end
   end
 
-  def test_assert_jpeg_image_upload
+  def test_assert_file_upload
     tmp = generate_tempfile(:jpeg)
     assert Upload.create(:file => tmp).errors.blank?
   end
 
+  def test_assert_jpeg_image_upload
+    tmp = generate_tempfile(:jpeg)
+    assert Image.create(:file => tmp).errors.blank?
+  end
+
   def test_assert_not_image_upload
     tmp = generate_tempfile(:text)
-    assert !Upload.create(:file => tmp).errors.blank?
+    assert !Image.create(:file => tmp).errors.blank?
+  end
+
+  def test_assert_upload_methods
+    tmp = generate_tempfile(:text)
+    upload = Upload.create(:file => tmp)
+    assert_not_nil upload.upload_filepath
+    assert_not_nil upload.upload_dirpath
+    assert_not_nil upload.file_exist?
+    assert_not_nil upload.upload_tempfile?
+  end
+
+  def test_assert_image_methods
+    tmp = generate_tempfile(:jpeg)
+    image = Image.create(:file => tmp)
+    assert_not_nil image.upload_filepath
+    assert_not_nil image.upload_dirpath
+    assert_not_nil image.file_exist?
+    assert_not_nil image.image_exist?
+    assert_not_nil image.upload_tempfile?
+    assert_not_nil image.width
+    assert_not_nil image.height
   end
 
   def test_define_with_file_field_options

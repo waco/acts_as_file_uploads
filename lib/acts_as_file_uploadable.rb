@@ -47,7 +47,7 @@ module ActsAsFileUploadable #:nodoc:
         # generate filepath
         def upload_filepath(size = "")
           dirpath = self.upload_dirpath(size)
-          filename = "#{dirpath}/#{self.id.to_s}"
+          "#{dirpath}/#{self.id.to_s}"
         end
 
         # generate dirpath
@@ -56,10 +56,12 @@ module ActsAsFileUploadable #:nodoc:
           dir = "#{ActsAsFileUploadable::Config.upload_dir}/#{self.file_upload.dir}/"
         end
 
+        # whether exist file
         def file_exist?(size = "")
           !!self.id && !!self.content_type && File.exist?(upload_filepath(size))
         end
 
+        # whether upload file
         def upload_tempfile?
           !@upload_tempfile.nil?
         end
@@ -123,8 +125,16 @@ module ActsAsFileUploadable #:nodoc:
     end
   end
 
+  # configuration
   class Config
-    cattr_accessor :upload_dir
+    @@upload_dir = nil
+    def self.upload_dir=(value)
+      @@upload_dir = value
+    end
+    def self.upload_dir
+      raise RuntimeError, "must config acts_as_file_uploadable.upload_dir" if @@upload_dir.blank?
+      @@upload_dir
+    end
   end
 
   class Railtie < ::Rails::Railtie
