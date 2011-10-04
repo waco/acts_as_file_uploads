@@ -52,7 +52,6 @@ module ActsAsFileUploadable #:nodoc:
 
         # generate dirpath
         def upload_dirpath(size = "")
-          size = size.to_s
           dir = "#{ActsAsFileUploadable::Config.upload_dir}/#{self.file_upload.dir}/"
         end
 

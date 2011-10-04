@@ -67,12 +67,12 @@ module ActsAsImageUploadable #:nodoc:
 
         # get image width
         def width(size_name = "")
-          get_image_size_lists(size_name)["width"]
+          get_image_size_lists(size_name)["width"] || nil
         end
 
         # get image height
         def height(size_name = "")
-          get_image_size_lists(size_name)["height"]
+          get_image_size_lists(size_name)["height"] || nil
         end
 
         private
@@ -92,12 +92,13 @@ module ActsAsImageUploadable #:nodoc:
 
           resize_files
 
+          self.content_type = "image/#{self.file_upload.convert}" if self.file_upload.convert
+          self.class.skip_callback(:save, :after, :save_upload_file)
           if self.respond_to? :size
-            self.class.skip_callback(:save, :after, :save_upload_file)
             self.size = @size_list.to_json
-            self.save :validate => false
-            self.class.set_callback(:save, :after, :save_upload_file)
           end
+          self.save :validate => false
+          self.class.set_callback(:save, :after, :save_upload_file)
 
           run_gc
         end
@@ -122,7 +123,7 @@ module ActsAsImageUploadable #:nodoc:
         end
 
         def get_image_size_lists(size_name = "")
-          unless self.respond_to? :size
+          if !self.respond_to?(:size) || self.size.blank?
             {}
           else
             size_name = size_name.to_s unless size_name.blank?
