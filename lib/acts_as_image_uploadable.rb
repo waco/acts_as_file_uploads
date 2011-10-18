@@ -88,7 +88,10 @@ module ActsAsImageUploadable #:nodoc:
           file_upload_class = self.file_upload
           @size_list = {}
           @size_list[ActsAsFileUploadable::Config.defaut_size_name] = { :width => img.columns, :height => img.rows }
-          img.write(upload_filepath) { self.format = file_upload_class.convert if file_upload_class.convert }
+          img.colorspace = Magick::RGBColorspace
+          img.write(upload_filepath) {
+            self.format = file_upload_class.convert if file_upload_class.convert
+          }
 
           resize_files
 
@@ -115,6 +118,7 @@ module ActsAsImageUploadable #:nodoc:
           ratio_rows = resize_height.blank? ? 1.0 : resize_height.to_f / img.rows.to_f
           ratio = [ratio_columns, ratio_rows].min
           img = img.resize(ratio) if ratio < 1.0
+          img.colorspace = Magick::RGBColorspace
           @size_list[name] = { :width => img.columns, :height => img.rows }
           mkdir(upload_dirpath(name))
           img.write(upload_filepath(name))
@@ -149,7 +153,7 @@ module ActsAsImageUploadable #:nodoc:
     #
     def validates_image_upload_of(*attr_names)
       configuration = {
-        :message => 'disallowed image format',
+        :message => ' is disallowed image format',
         :content_type => [
           "image/png",
           "image/x-png",
